@@ -161,6 +161,13 @@ gtag('config', 'G-MY475CC4QV');
             color: #94a3b8 !important;
         }
         
+        /* Radio card choice (cycle selection) */
+        .cycle-option.cycle-selected {
+            border-color: #6366f1 !important;
+            background-color: rgba(99, 102, 241, 0.1) !important;
+            box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.4);
+        }
+
         /* Keep white text in buttons white */
         a.bg-gradient-to-r.from-indigo-600,
         button.bg-gradient-to-r.from-indigo-600,
@@ -471,6 +478,23 @@ gtag('config', 'G-MY475CC4QV');
                         <input type="checkbox" name="botcheck" style="display: none;">
 
                         <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 sm:mb-2">איזה מסלול מתאים לכם?</label>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <label class="cycle-option relative flex flex-col items-center text-center gap-1 cursor-pointer bg-[#090d16] border border-white/10 rounded-xl px-4 py-3 sm:py-3.5 transition-all">
+                                    <input type="radio" name="cycleChoice" value="המחזור הקרוב (12/7/26)" required class="sr-only cycle-radio">
+                                    <span class="text-sm font-bold text-slate-100">המחזור הקרוב</span>
+                                    <span class="text-xs text-slate-400">נפתח ב-12/7/26</span>
+                                </label>
+                                <label class="cycle-option relative flex flex-col items-center text-center gap-1 cursor-pointer bg-[#090d16] border border-white/10 rounded-xl px-4 py-3 sm:py-3.5 transition-all">
+                                    <input type="radio" name="cycleChoice" value="השארת פרטים למחזורים הבאים" required class="sr-only cycle-radio">
+                                    <span class="text-sm font-bold text-slate-100">השארת פרטים</span>
+                                    <span class="text-xs text-slate-400">למחזורים הבאים</span>
+                                </label>
+                            </div>
+                            <p id="cycleChoiceError" class="hidden text-red-400 text-xs text-center mt-2">יש לבחור אחת מהאפשרויות לפני השליחה</p>
+                        </div>
+
+                        <div>
                             <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 sm:mb-2">שם מלא של ההורה</label>
                             <input type="text" name="parentName" required="" id="parentName" placeholder="ישראל ישראלי" class="w-full bg-[#090d16] border border-white/10 rounded-xl px-4 py-3 sm:py-3.5 text-slate-100 placeholder:text-slate-700 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30 transition-all text-right">
                         </div>
@@ -548,18 +572,27 @@ gtag('config', 'G-MY475CC4QV');
             const form = document.getElementById('campSignupForm');
             const submitBtn = document.getElementById('submitBtn');
             const formError = document.getElementById('formError');
+            const cycleChoiceError = document.getElementById('cycleChoiceError');
             const formData = new FormData(form);
             const payload = Object.fromEntries(formData.entries());
 
-            const sheetData = { parentName: payload.parentName, childName: payload.childName, childAge: payload.childAge, parentPhone: payload.parentPhone };
+            cycleChoiceError.classList.add('hidden');
             formError.classList.add('hidden');
+
+            if (!payload.cycleChoice) {
+                cycleChoiceError.classList.remove('hidden');
+                document.querySelector('.cycle-option').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+
+            const sheetData = { parentName: payload.parentName, childName: payload.childName, childAge: payload.childAge, parentPhone: payload.parentPhone, cycleChoice: payload.cycleChoice };
             submitBtn.disabled = true;
             submitBtn.textContent = 'שולח...';
 
             try {
                 await Promise.all([submitToWeb3Forms(payload), submitToGoogleSheets(sheetData)]);
                 document.getElementById('modalTitle').innerText = `תודה, ${payload.parentName}!`;
-                document.getElementById('modalMessage').innerHTML = `רשמנו בהצלחה את פרטי הקשר שלך (<strong class="text-indigo-400">${payload.parentPhone}</strong>) עבור <strong class="text-indigo-400">${payload.childName}</strong> (גיל/כיתה: ${payload.childAge}).<br><br>נשלח לך הודעת וואטסאפ בהקדם!`;
+                document.getElementById('modalMessage').innerHTML = `רשמנו בהצלחה את פרטי הקשר שלך (<strong class="text-indigo-400">${payload.parentPhone}</strong>) עבור <strong class="text-indigo-400">${payload.childName}</strong> (גיל/כיתה: ${payload.childAge}).<br><br>בחרת באפשרות: <strong class="text-indigo-400">${payload.cycleChoice}</strong>.<br><br>נשלח לך הודעת וואטסאפ בהקדם!`;
                 
                 document.getElementById('formContainer').classList.add('hidden');
                 const successContainer = document.getElementById('successContainer');
@@ -574,12 +607,26 @@ gtag('config', 'G-MY475CC4QV');
             }
         }
 
+        // עדכון העיצוב הוויזואלי כאשר נבחרת אחת מאפשרויות המחזור
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.cycle-radio').forEach(radio => {
+                radio.addEventListener('change', () => {
+                    document.querySelectorAll('.cycle-option').forEach(label => label.classList.remove('cycle-selected'));
+                    if (radio.checked) {
+                        radio.closest('.cycle-option').classList.add('cycle-selected');
+                        document.getElementById('cycleChoiceError').classList.add('hidden');
+                    }
+                });
+            });
+        });
+
         function resetSignupForm() {
             const formContainer = document.getElementById('formContainer');
             const successContainer = document.getElementById('successContainer');
             successContainer.classList.add('hidden');
             formContainer.classList.remove('hidden');
             document.getElementById('campSignupForm').reset();
+            document.querySelectorAll('.cycle-option').forEach(label => label.classList.remove('cycle-selected'));
         }
     </script>
 
